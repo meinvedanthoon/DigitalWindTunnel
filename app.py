@@ -487,7 +487,7 @@ if st.button("🚀 Run Analysis", type="primary"):
     if coords_1 is None:
         st.error("❌ Please select Airfoil 1 first.")
     else:
-        with st.spinner("Running NeuralFoil simulation..."):
+        with st.spinner("Running simulation..."):
             try:
                 res1 = nf.get_aero_from_coordinates(
                     coordinates=coords_1, 
@@ -527,7 +527,7 @@ if st.button("🚀 Run Analysis", type="primary"):
                     
                     if 'analysis_confidence' in res1:
                         conf = res1['analysis_confidence'][0]
-                        st.caption(f"🤖 Neural Network Confidence: {conf:.1%}")
+                        st.caption(f"🤖 AI Confidence: {conf:.1%}")
                         st.progress(float(conf))
 
                     if res2:
@@ -614,4 +614,4 @@ if st.button("🚀 Run Analysis", type="primary"):
             except Exception as e:
                 st.error(f"❌ Simulation failed: {e}")
                 st.exception(e)
-
+                
