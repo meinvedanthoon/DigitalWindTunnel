@@ -26,9 +26,14 @@ with col_header_left:
     """)
 
 with col_header_right:
-    image_filename = "REPLACE_WITH_YOUR_IMAGE_NAME.png" 
+    # ---------------------------------------------------------------------
+    # ▶️▶️▶️ REPLACE FILENAME BELOW WITH YOUR IMAGE ◀️◀️◀️
+    image_filename = "kcg_log.png" 
+    # ---------------------------------------------------------------------
+    
     try:
         img = Image.open(image_filename)
+        # Force white background for transparent images
         white_bg = Image.new("RGBA", img.size, "WHITE")
         if img.mode in ('RGBA', 'LA'):
             white_bg.paste(img, (0, 0), img)
@@ -37,13 +42,16 @@ with col_header_right:
             final_image = img.convert("RGB")
         st.image(final_image, use_container_width=True)
     except Exception:
-        pass 
+        pass # Silent fail if image missing to keep UI clean
+
 
 # --- Sidebar: Controls ---
 st.sidebar.header("🧪 Configuration")
 
+# 1. Comparison Toggle
 enable_comparison = st.sidebar.checkbox("⚔️ Compare Two Airfoils", value=False)
 
+# Helper function to get airfoil coordinates
 def get_airfoil_input(key_prefix):
     st.sidebar.subheader(f"{key_prefix} Selection")
     
@@ -58,6 +66,7 @@ def get_airfoil_input(key_prefix):
 
     try:
         if input_type == "NACA 4-Digit":
+            # 4-Series is a GENERATOR (Formula-based)
             code = st.sidebar.text_input(f"Code (4 Digits)", value="2412" if key_prefix == "Airfoil 1" else "0012", key=f"{key_prefix}_4", max_chars=4)
             if len(code) == 4 and code.isdigit():
                 name = f"NACA {code}"
@@ -65,9 +74,10 @@ def get_airfoil_input(key_prefix):
                 af = af.repanel(n_points_per_side=100)
                 coords = af.coordinates
             elif len(code) > 0:
-                st.sidebar.warning(f"Requires 4 digits (e.g. 2412).")
+                st.sidebar.warning(f"Requires exactly 4 digits (e.g. 2412).")
 
         elif input_type == "NACA 5-Digit":
+            # 5-Series is a GENERATOR (Formula-based)
             code = st.sidebar.text_input(f"Code (5 Digits)", value="23012", key=f"{key_prefix}_5", max_chars=5)
             if len(code) == 5 and code.isdigit():
                 name = f"NACA {code}"
@@ -75,20 +85,20 @@ def get_airfoil_input(key_prefix):
                 af = af.repanel(n_points_per_side=100)
                 coords = af.coordinates
             elif len(code) > 0:
-                st.sidebar.warning(f"Requires 5 digits (e.g. 23012).")
+                st.sidebar.warning(f"Requires exactly 5 digits (e.g. 23012).")
 
         elif input_type == "NACA 6-Series":
-            st.caption("Common: 63-412, 64-212, 65-210")
-            code = st.sidebar.text_input(f"Code (6-Series)", value="64-212", key=f"{key_prefix}_6")
+            # 6-Series is a DATABASE LOOKUP (Must exist in UIUC database)
+            st.caption("Standard Codes: 64-212, 63-415, 65-210")
+            raw_code = st.sidebar.text_input(f"Code (6-Series)", value="64-212", key=f"{key_prefix}_6")
             
-            if len(code) >= 4:
-                name = f"NACA {code}"
-                clean_code = code.strip().replace(" ", "") # Remove spaces
+            if len(raw_code) >= 4:
+                # Intelligent Cleaning: Remove "naca", spaces, make lowercase
+                clean_code = raw_code.lower().replace("naca", "").replace(" ", "").strip()
+                name = f"NACA {clean_code.upper()}"
                 
-                # SMART GENERATOR: Try multiple formats
                 success = False
-                
-                # Attempt 1: Exact Input (e.g. "naca64-212")
+                # Strategy 1: Try exact match (e.g. "naca64-212")
                 try:
                     af = asb.Airfoil(f"naca{clean_code}")
                     coords = af.repanel(n_points_per_side=100).coordinates
@@ -96,7 +106,7 @@ def get_airfoil_input(key_prefix):
                 except:
                     pass
                 
-                # Attempt 2: Remove Dash (e.g. "naca64212")
+                # Strategy 2: Try removing dash (e.g. "naca64212")
                 if not success and "-" in clean_code:
                     try:
                         af = asb.Airfoil(f"naca{clean_code.replace('-', '')}")
@@ -106,8 +116,8 @@ def get_airfoil_input(key_prefix):
                         pass
                 
                 if not success:
-                    st.sidebar.error(f"❌ Not found in database.")
-                    st.sidebar.info("Tip: 6-Series support is limited to standard shapes in the UIUC database. If this fails, please download the .dat file from Airfoil Tools and use 'Upload DAT'.")
+                    st.sidebar.error(f"❌ Airfoil 'NACA {clean_code}' not found.")
+                    st.sidebar.info("Note: 6-Series are looked up from a database. If your code isn't standard, use 'Upload DAT'.")
 
         elif input_type == "Upload DAT":
             file = st.sidebar.file_uploader(f"Upload .dat", type=["dat", "txt"], key=f"{key_prefix}_file")
@@ -117,11 +127,13 @@ def get_airfoil_input(key_prefix):
                     data = []
                     for line in string_data:
                         parts = line.split()
-                        # Robust parsing for various DAT formats
+                        # Robust parsing: Look for any line with 2 floats
                         if len(parts) >= 2:
                             try:
+                                # Try to parse the first two columns as floats
                                 x = float(parts[0])
                                 y = float(parts[1])
+                                # Filter out likely header lines (e.g. "1.0 0.0" is fine, but "Mach Alpha" is not)
                                 data.append([x, y])
                             except: pass
                     
@@ -129,7 +141,7 @@ def get_airfoil_input(key_prefix):
                         coords = np.array(data)
                         name = file.name
                     else:
-                        st.sidebar.error("File format not recognized.")
+                        st.sidebar.error("File seems empty or invalid.")
                 except:
                     st.sidebar.error("Error parsing file.")
 
@@ -170,19 +182,23 @@ def apply_strict_physics_filter(res_dict, alpha_arr):
     """
     cl = res_dict['CL'].flatten()
     
-    stall_idx = np.argmax(cl) 
+    # 1. Find the "First Peak" (Real Stall)
+    stall_idx = np.argmax(cl) # Default to max
     
+    # Heuristic: Find first local peak in positive alpha region
     for i in range(1, len(cl)-1):
         if alpha_arr[i] > 0 and cl[i] > cl[i-1] and cl[i] > cl[i+1]:
             stall_idx = i
             break 
 
+    # 2. Scan points AFTER the stall
     cutoff_idx = len(cl)
     for i in range(stall_idx + 1, len(cl)):
-        if cl[i] > cl[i-1]: 
+        if cl[i] > cl[i-1]: # If lift rises again, cut it off
             cutoff_idx = i
             break
             
+    # 3. Truncate arrays
     new_res = {}
     for key, val in res_dict.items():
         if isinstance(val, np.ndarray):
@@ -256,38 +272,4 @@ if st.button("🚀 Run Analysis", type="primary"):
                     cols2[0].metric("CL", f"{res2['CL'][0]:.4f}", delta=f"{res2['CL'][0] - res1['CL'][0]:.4f}")
                     cols2[1].metric("CD", f"{res2['CD'][0]:.5f}", delta=f"{res2['CD'][0] - res1['CD'][0]:.5f}", delta_color="inverse")
                     cols2[2].metric("CM", f"{res2['CM'][0]:.4f}")
-                    cols2[3].metric("L/D", f"{res2['CL'][0]/res2['CD'][0]:.1f}", delta=f"{(res2['CL'][0]/res2['CD'][0]) - (res1['CL'][0]/res1['CD'][0]):.1f}")
-
-            else: # Polar Sweep
-                # Prepare Data for Plotting
-                df1 = pd.DataFrame({
-                    "Alpha": alpha1, "CL": res1["CL"].flatten(), "CD": res1["CD"].flatten(), 
-                    "CM": res1["CM"].flatten(), "Airfoil": name_1
-                })
-                df_all = df1
-                
-                if res2:
-                    df2 = pd.DataFrame({
-                        "Alpha": alpha2, "CL": res2["CL"].flatten(), "CD": res2["CD"].flatten(), 
-                        "CM": res2["CM"].flatten(), "Airfoil": name_2
-                    })
-                    df_all = pd.concat([df1, df2])
-
-                df_all["L/D"] = df_all["CL"] / np.maximum(df_all["CD"], 1e-6)
-
-                tab1, tab2, tab3 = st.tabs(["Lift (CL vs α)", "Drag (CL vs CD)", "Efficiency (L/D)"])
-                
-                def create_spline_chart(df, x, y, title):
-                    fig = px.line(df, x=x, y=y, color="Airfoil", title=title)
-                    fig.update_traces(line_shape='spline', line_smoothing=1.0)
-                    return fig
-
-                with tab1:
-                    st.plotly_chart(create_spline_chart(df_all, "Alpha", "CL", "Lift Curve"), use_container_width=True)
-                with tab2:
-                    st.plotly_chart(create_spline_chart(df_all, "CD", "CL", "Drag Polar"), use_container_width=True)
-                with tab3:
-                    st.plotly_chart(create_spline_chart(df_all, "Alpha", "L/D", "L/D Ratio"), use_container_width=True)
-
-                csv = df_all.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 Download Results (CSV)", csv, "wind_tunnel_results.csv", "text/csv")
+                    cols2[3].metric("L/D", f"{res2['
