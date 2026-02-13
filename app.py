@@ -28,7 +28,7 @@ with col_header_left:
 with col_header_right:
   
     image_filename = "kcg_logo.png" 
- -
+ 
     
     try:
         img = Image.open(image_filename)
@@ -277,3 +277,4 @@ if st.button("🚀 Run Analysis", type="primary"):
                 # CSV Download
                 csv = df_all.to_csv(index=False).encode('utf-8')
                 st.download_button("📥 Download Results (CSV)", csv, "wind_tunnel_results.csv", "text/csv")
+
