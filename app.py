@@ -10,7 +10,7 @@ import io
 import requests
 import re
 
-# --- Page Configuration ---
+# Page Configuration
 st.set_page_config(
     page_title="Digital Wind Tunnel Pro",
     page_icon="💨",
@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 🖼️ Header with White-Background Logo ---
+# Header
 col_header_left, col_header_right = st.columns([7, 3])
 
 with col_header_left:
@@ -42,13 +42,13 @@ with col_header_right:
     except Exception:
         pass 
 
-# --- Sidebar: Controls ---
+# Sidebar: Controls
 st.sidebar.header("🧪 Configuration")
 
 enable_comparison = st.sidebar.checkbox("⚔️ Compare Two Airfoils", value=False)
 
 
-# --- IMPROVED: WEB FETCH WITH NACA 6-SERIES LOGIC ---
+# WEB FETCH WITH NACA 6-SERIES LOGIC
 def fetch_airfoil_from_web(clean_code, is_6_series=False):
     """
     Enhanced fetcher with NACA 6-series specific logic.
@@ -61,7 +61,7 @@ def fetch_airfoil_from_web(clean_code, is_6_series=False):
     variations = []
     
     if is_6_series:
-        # Extract components: e.g., "63-415" -> series=6, sublocation=3, designCL+thickness=415
+        # Extract components: 
         # Try to parse the format
         base = clean_code.replace("naca", "").replace(" ", "").lower()
         
@@ -145,7 +145,7 @@ def fetch_airfoil_from_web(clean_code, is_6_series=False):
                                 try:
                                     x = float(parts[0])
                                     y = float(parts[1])
-                                    # Sanity check: coordinates should be roughly in [0,1] or [-1,1]
+                                    # Sanity check
                                     if -2 <= x <= 2 and -2 <= y <= 2:
                                         data.append([x, y])
                                 except ValueError:
@@ -167,7 +167,7 @@ def fetch_airfoil_from_web(clean_code, is_6_series=False):
     return None, None
 
 
-# --- Helper function to get airfoil coordinates ---
+# Helper function to get airfoil coordinates
 def get_airfoil_input(key_prefix):
     st.sidebar.subheader(f"{key_prefix} Selection")
     
@@ -225,7 +225,7 @@ def get_airfoil_input(key_prefix):
                 # Clean input
                 clean_code = raw_code.lower().replace("naca", "").replace(" ", "").strip()
                 
-                # Validate format (should be like 63-415 or 63415)
+                # Validate format 
                 digits_only = re.sub(r'[^0-9]', '', clean_code)
                 if not (len(digits_only) >= 4 and digits_only[0] == '6'):
                     st.sidebar.error("❌ Invalid format. Must start with '6' (e.g., 63-415)")
@@ -266,7 +266,7 @@ def get_airfoil_input(key_prefix):
                                 success = True
                                 st.sidebar.success(f"✅ {web_name} downloaded!")
                     
-                    # Strategy 3: Generate Analytically (Fallback)
+                    # Strategy 3: Generate Analytically 
                     if not success:
                         st.sidebar.info("🔄 Step 3/3: Attempting analytical generation...")
                         try:
@@ -323,14 +323,14 @@ def get_airfoil_input(key_prefix):
     return name, coords
 
 
-# --- HELPER: Analytical NACA 6-Series Approximation ---
+# HELPER: Analytical NACA 6-Series Approximation
 def generate_naca_6_series_approximation(code):
     """
     Simplified NACA 6-series generator using thick airfoil theory.
     This is an APPROXIMATION and may not match exact profiles.
     """
     try:
-        # Parse code (e.g., "63-415" or "63415")
+        # Parse code
         digits = re.sub(r'[^0-9]', '', code)
         
         if len(digits) < 5:
@@ -363,7 +363,7 @@ def generate_naca_6_series_approximation(code):
             0.1015 * x**4
         )
         
-        # Simplified camber (approximation)
+        # Simplified camber 
         # Real 6-series uses complex mean line equations
         camber_scale = design_cl * 0.3
         yc = camber_scale * x * (1 - x)
@@ -374,7 +374,7 @@ def generate_naca_6_series_approximation(code):
         x_lower = x
         y_lower = yc - yt
         
-        # Combine coordinates (trailing edge -> leading edge -> trailing edge)
+        # Combine coordinates 
         coords = np.vstack([
             np.column_stack([x_upper[::-1], y_upper[::-1]]),
             np.column_stack([x_lower[1:], y_lower[1:]])
@@ -390,7 +390,7 @@ def generate_naca_6_series_approximation(code):
 # Get Airfoil 1
 name_1, coords_1 = get_airfoil_input("Airfoil 1")
 
-# Get Airfoil 2 (if enabled)
+# Get Airfoil 2
 name_2, coords_2 = None, None
 if enable_comparison:
     name_2, coords_2 = get_airfoil_input("Airfoil 2")
@@ -421,7 +421,7 @@ else:
     alpha = np.linspace(r[0], r[1], 80)
 
 
-# --- Strict Physics Filter ---
+# Physics Filter
 def apply_strict_physics_filter(res_dict, alpha_arr):
     """Remove post-stall unphysical regions"""
     cl = res_dict['CL'].flatten()
@@ -448,7 +448,7 @@ def apply_strict_physics_filter(res_dict, alpha_arr):
     return new_res, alpha_arr[:cutoff_idx]
 
 
-# --- Main Area ---
+# Main Area
 
 if coords_1 is not None:
     with st.expander("📐 Airfoil Geometry", expanded=True):
@@ -614,3 +614,4 @@ if st.button("🚀 Run Analysis", type="primary"):
             except Exception as e:
                 st.error(f"❌ Simulation failed: {e}")
                 st.exception(e)
+
