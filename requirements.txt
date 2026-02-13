@@ -1,0 +1,7 @@
+streamlit
+neuralfoil
+aerosandbox
+numpy
+plotly
+pandas
+Pillow
