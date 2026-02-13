@@ -28,7 +28,7 @@ with col_header_left:
 with col_header_right:
     # ---------------------------------------------------------------------
     # ▶️▶️▶️ REPLACE FILENAME BELOW WITH YOUR IMAGE ◀️◀️◀️
-    image_filename = "kcg_log.png" 
+    image_filename = "kcg_logo.png" 
     # ---------------------------------------------------------------------
     
     try:
@@ -254,11 +254,16 @@ if st.button("🚀 Run Analysis", type="primary"):
             
             if analysis_mode == "Single Point":
                 # Metrics for Airfoil 1
+                cl1 = res1['CL'][0]
+                cd1 = res1['CD'][0]
+                cm1 = res1['CM'][0]
+                ld1 = cl1 / cd1
+
                 cols = st.columns(4)
-                cols[0].metric("CL", f"{res1['CL'][0]:.4f}")
-                cols[1].metric("CD", f"{res1['CD'][0]:.5f}")
-                cols[2].metric("CM", f"{res1['CM'][0]:.4f}")
-                cols[3].metric("L/D", f"{res1['CL'][0]/res1['CD'][0]:.1f}")
+                cols[0].metric("CL", f"{cl1:.4f}")
+                cols[1].metric("CD", f"{cd1:.5f}")
+                cols[2].metric("CM", f"{cm1:.4f}")
+                cols[3].metric("L/D", f"{ld1:.1f}")
                 
                 if 'analysis_confidence' in res1:
                     conf = res1['analysis_confidence'][0]
@@ -268,8 +273,50 @@ if st.button("🚀 Run Analysis", type="primary"):
                 if res2:
                     st.divider()
                     st.subheader(f"🆚 Comparison: {name_2}")
+                    
+                    # Pre-calculate Comparison 2 metrics
+                    cl2 = res2['CL'][0]
+                    cd2 = res2['CD'][0]
+                    cm2 = res2['CM'][0]
+                    ld2 = cl2 / cd2
+                    
                     cols2 = st.columns(4)
-                    cols2[0].metric("CL", f"{res2['CL'][0]:.4f}", delta=f"{res2['CL'][0] - res1['CL'][0]:.4f}")
-                    cols2[1].metric("CD", f"{res2['CD'][0]:.5f}", delta=f"{res2['CD'][0] - res1['CD'][0]:.5f}", delta_color="inverse")
-                    cols2[2].metric("CM", f"{res2['CM'][0]:.4f}")
-                    cols2[3].metric("L/D", f"{res2['
+                    cols2[0].metric("CL", f"{cl2:.4f}", delta=f"{cl2 - cl1:.4f}")
+                    cols2[1].metric("CD", f"{cd2:.5f}", delta=f"{cd2 - cd1:.5f}", delta_color="inverse")
+                    cols2[2].metric("CM", f"{cm2:.4f}")
+                    # FIXED: Broken down into simpler variables to prevent SyntaxError
+                    cols2[3].metric("L/D", f"{ld2:.1f}", delta=f"{ld2 - ld1:.1f}")
+
+            else: # Polar Sweep
+                # Prepare Data for Plotting
+                df1 = pd.DataFrame({
+                    "Alpha": alpha1, "CL": res1["CL"].flatten(), "CD": res1["CD"].flatten(), 
+                    "CM": res1["CM"].flatten(), "Airfoil": name_1
+                })
+                df_all = df1
+                
+                if res2:
+                    df2 = pd.DataFrame({
+                        "Alpha": alpha2, "CL": res2["CL"].flatten(), "CD": res2["CD"].flatten(), 
+                        "CM": res2["CM"].flatten(), "Airfoil": name_2
+                    })
+                    df_all = pd.concat([df1, df2])
+
+                df_all["L/D"] = df_all["CL"] / np.maximum(df_all["CD"], 1e-6)
+
+                tab1, tab2, tab3 = st.tabs(["Lift (CL vs α)", "Drag (CL vs CD)", "Efficiency (L/D)"])
+                
+                def create_spline_chart(df, x, y, title):
+                    fig = px.line(df, x=x, y=y, color="Airfoil", title=title)
+                    fig.update_traces(line_shape='spline', line_smoothing=1.0)
+                    return fig
+
+                with tab1:
+                    st.plotly_chart(create_spline_chart(df_all, "Alpha", "CL", "Lift Curve"), use_container_width=True)
+                with tab2:
+                    st.plotly_chart(create_spline_chart(df_all, "CD", "CL", "Drag Polar"), use_container_width=True)
+                with tab3:
+                    st.plotly_chart(create_spline_chart(df_all, "Alpha", "L/D", "L/D Ratio"), use_container_width=True)
+
+                csv = df_all.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 Download Results (CSV)", csv, "wind_tunnel_results.csv", "text/csv")
