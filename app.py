@@ -7,7 +7,7 @@ import plotly.express as px
 import pandas as pd
 from PIL import Image
 
-# Page Configuration
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Digital Wind Tunnel Pro",
     page_icon="💨",
@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Header with White-Background Logo
+# --- 🖼️ Header with White-Background Logo ---
 col_header_left, col_header_right = st.columns([7, 3])
 
 with col_header_left:
@@ -26,10 +26,7 @@ with col_header_left:
     """)
 
 with col_header_right:
-  
-    image_filename = "kcg_logo.png" 
- 
-    
+    image_filename = "REPLACE_WITH_YOUR_IMAGE_NAME.png" 
     try:
         img = Image.open(image_filename)
         white_bg = Image.new("RGBA", img.size, "WHITE")
@@ -39,21 +36,17 @@ with col_header_right:
         else:
             final_image = img.convert("RGB")
         st.image(final_image, use_container_width=True)
-    except Exception as e:
-        pass # Silent fail if image missing to keep UI clean
+    except Exception:
+        pass 
 
-
-# Sidebar: Controls 
+# --- Sidebar: Controls ---
 st.sidebar.header("🧪 Configuration")
 
-# 1. Comparison Toggle
 enable_comparison = st.sidebar.checkbox("⚔️ Compare Two Airfoils", value=False)
 
-# Helper function to get airfoil coordinates
 def get_airfoil_input(key_prefix):
     st.sidebar.subheader(f"{key_prefix} Selection")
     
-    # Dropdown with all Series
     input_type = st.sidebar.selectbox(
         f"Input Type", 
         ["NACA 4-Digit", "NACA 5-Digit", "NACA 6-Series", "Upload DAT"], 
@@ -65,7 +58,6 @@ def get_airfoil_input(key_prefix):
 
     try:
         if input_type == "NACA 4-Digit":
-            
             code = st.sidebar.text_input(f"Code (4 Digits)", value="2412" if key_prefix == "Airfoil 1" else "0012", key=f"{key_prefix}_4", max_chars=4)
             if len(code) == 4 and code.isdigit():
                 name = f"NACA {code}"
@@ -73,10 +65,9 @@ def get_airfoil_input(key_prefix):
                 af = af.repanel(n_points_per_side=100)
                 coords = af.coordinates
             elif len(code) > 0:
-                st.sidebar.warning(f"NACA 4-Series requires exactly 4 digits.")
+                st.sidebar.warning(f"Requires 4 digits (e.g. 2412).")
 
         elif input_type == "NACA 5-Digit":
-            
             code = st.sidebar.text_input(f"Code (5 Digits)", value="23012", key=f"{key_prefix}_5", max_chars=5)
             if len(code) == 5 and code.isdigit():
                 name = f"NACA {code}"
@@ -84,46 +75,73 @@ def get_airfoil_input(key_prefix):
                 af = af.repanel(n_points_per_side=100)
                 coords = af.coordinates
             elif len(code) > 0:
-                st.sidebar.warning(f"NACA 5-Series requires exactly 5 digits.")
+                st.sidebar.warning(f"Requires 5 digits (e.g. 23012).")
 
         elif input_type == "NACA 6-Series":
-            st.caption("Format: e.g., 64-212, 63412")
-            code = st.sidebar.text_input(f"Code (6-Series)", value="64-212", key=f"{key_prefix}_6", max_chars=10)
+            st.caption("Common: 63-412, 64-212, 65-210")
+            code = st.sidebar.text_input(f"Code (6-Series)", value="64-212", key=f"{key_prefix}_6")
             
-            if len(code) >= 5: 
+            if len(code) >= 4:
                 name = f"NACA {code}"
-                clean_code = code.strip()
+                clean_code = code.strip().replace(" ", "") # Remove spaces
                 
+                # SMART GENERATOR: Try multiple formats
+                success = False
+                
+                # Attempt 1: Exact Input (e.g. "naca64-212")
                 try:
                     af = asb.Airfoil(f"naca{clean_code}")
-                    af = af.repanel(n_points_per_side=100)
-                    coords = af.coordinates
+                    coords = af.repanel(n_points_per_side=100).coordinates
+                    success = True
                 except:
-                    st.sidebar.error("Invalid NACA 6-Series code.")
+                    pass
+                
+                # Attempt 2: Remove Dash (e.g. "naca64212")
+                if not success and "-" in clean_code:
+                    try:
+                        af = asb.Airfoil(f"naca{clean_code.replace('-', '')}")
+                        coords = af.repanel(n_points_per_side=100).coordinates
+                        success = True
+                    except:
+                        pass
+                
+                if not success:
+                    st.sidebar.error(f"❌ Not found in database.")
+                    st.sidebar.info("Tip: 6-Series support is limited to standard shapes in the UIUC database. If this fails, please download the .dat file from Airfoil Tools and use 'Upload DAT'.")
 
         elif input_type == "Upload DAT":
             file = st.sidebar.file_uploader(f"Upload .dat", type=["dat", "txt"], key=f"{key_prefix}_file")
             if file:
-                string_data = file.getvalue().decode("utf-8").splitlines()
-                data = []
-                for line in string_data:
-                    parts = line.split()
-                    if len(parts) == 2:
-                        try:
-                            data.append([float(parts[0]), float(parts[1])])
-                        except: pass
-                coords = np.array(data)
-                name = file.name
+                try:
+                    string_data = file.getvalue().decode("utf-8").splitlines()
+                    data = []
+                    for line in string_data:
+                        parts = line.split()
+                        # Robust parsing for various DAT formats
+                        if len(parts) >= 2:
+                            try:
+                                x = float(parts[0])
+                                y = float(parts[1])
+                                data.append([x, y])
+                            except: pass
+                    
+                    if len(data) > 10:
+                        coords = np.array(data)
+                        name = file.name
+                    else:
+                        st.sidebar.error("File format not recognized.")
+                except:
+                    st.sidebar.error("Error parsing file.")
 
     except Exception as e:
-        st.sidebar.error(f"Could not generate {input_type}. Check code.")
+        st.sidebar.error(f"Error: {e}")
     
     return name, coords
 
 # Get Airfoil 1
 name_1, coords_1 = get_airfoil_input("Airfoil 1")
 
-# Get Airfoil 2 
+# Get Airfoil 2 (if enabled)
 name_2, coords_2 = None, None
 if enable_comparison:
     name_2, coords_2 = get_airfoil_input("Airfoil 2")
@@ -145,14 +163,14 @@ else:
     r = st.sidebar.slider("Alpha Sweep Range", -30.0, 30.0, (-5.0, 25.0))
     alpha = np.linspace(r[0], r[1], 80)
 
-# Physics Filter 
+# --- Helper: Strict Physics Filter ---
 def apply_strict_physics_filter(res_dict, alpha_arr):
     """
     Detects the FIRST peak (Stall) and cuts off data immediately if it tries to rise again.
     """
     cl = res_dict['CL'].flatten()
     
-    stall_idx = np.argmax(cl) # Default to max
+    stall_idx = np.argmax(cl) 
     
     for i in range(1, len(cl)-1):
         if alpha_arr[i] > 0 and cl[i] > cl[i-1] and cl[i] > cl[i+1]:
@@ -161,11 +179,10 @@ def apply_strict_physics_filter(res_dict, alpha_arr):
 
     cutoff_idx = len(cl)
     for i in range(stall_idx + 1, len(cl)):
-        if cl[i] > cl[i-1]: # If lift rises again, cut it off
+        if cl[i] > cl[i-1]: 
             cutoff_idx = i
             break
             
-    # 3. Truncate arrays
     new_res = {}
     for key, val in res_dict.items():
         if isinstance(val, np.ndarray):
@@ -176,12 +193,13 @@ def apply_strict_physics_filter(res_dict, alpha_arr):
     return new_res, alpha_arr[:cutoff_idx]
 
 
-# Main Area 
+# --- Main Area ---
 
-# Visualization
+# Visualization: Geometry
 if coords_1 is not None:
     with st.expander("📐 Airfoil Geometry", expanded=True):
         fig_geo = go.Figure()
+        
         # Airfoil 1
         if not np.allclose(coords_1[0], coords_1[-1]): coords_1 = np.vstack([coords_1, coords_1[0]])
         fig_geo.add_trace(go.Scatter(x=coords_1[:,0], y=coords_1[:,1], mode='lines', name=name_1, fill="toself"))
@@ -204,19 +222,19 @@ if st.button("🚀 Run Analysis", type="primary"):
             res1 = nf.get_aero_from_coordinates(coordinates=coords_1, alpha=alpha, Re=reynolds, model_size=model_size)
             alpha1 = alpha.copy()
             
-            # Run for Airfoil 2 
+            # Run for Airfoil 2 (if exists)
             res2 = None
             alpha2 = alpha.copy()
             if enable_comparison and coords_2 is not None:
                 res2 = nf.get_aero_from_coordinates(coordinates=coords_2, alpha=alpha, Re=reynolds, model_size=model_size)
 
-            # Physics Filter (Always On)
+            # --- Apply Strict Physics Filter (Always On) ---
             if analysis_mode != "Single Point":
                 res1, alpha1 = apply_strict_physics_filter(res1, alpha1)
                 if res2:
                     res2, alpha2 = apply_strict_physics_filter(res2, alpha2)
 
-            # Display Results
+            # --- Display Results ---
             
             if analysis_mode == "Single Point":
                 # Metrics for Airfoil 1
@@ -226,7 +244,6 @@ if st.button("🚀 Run Analysis", type="primary"):
                 cols[2].metric("CM", f"{res1['CM'][0]:.4f}")
                 cols[3].metric("L/D", f"{res1['CL'][0]/res1['CD'][0]:.1f}")
                 
-                # Confidence
                 if 'analysis_confidence' in res1:
                     conf = res1['analysis_confidence'][0]
                     st.caption(f"🤖 AI Confidence Score: {conf:.1%}")
@@ -258,10 +275,8 @@ if st.button("🚀 Run Analysis", type="primary"):
 
                 df_all["L/D"] = df_all["CL"] / np.maximum(df_all["CD"], 1e-6)
 
-                # Tabs
                 tab1, tab2, tab3 = st.tabs(["Lift (CL vs α)", "Drag (CL vs CD)", "Efficiency (L/D)"])
                 
-                # 
                 def create_spline_chart(df, x, y, title):
                     fig = px.line(df, x=x, y=y, color="Airfoil", title=title)
                     fig.update_traces(line_shape='spline', line_smoothing=1.0)
@@ -274,7 +289,5 @@ if st.button("🚀 Run Analysis", type="primary"):
                 with tab3:
                     st.plotly_chart(create_spline_chart(df_all, "Alpha", "L/D", "L/D Ratio"), use_container_width=True)
 
-                # CSV Download
                 csv = df_all.to_csv(index=False).encode('utf-8')
                 st.download_button("📥 Download Results (CSV)", csv, "wind_tunnel_results.csv", "text/csv")
-
