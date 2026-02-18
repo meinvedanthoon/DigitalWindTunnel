@@ -22,7 +22,7 @@ st.set_page_config(
 col_header_left, col_header_right = st.columns([7, 3])
 
 with col_header_left:
-    st.title("💨 Digital Wind Tunnel Pro")
+    st.title("Digital Wind Tunnel Pro")
     st.markdown("""
     **Compare airfoils**, analyze performance, and export data.
     Supports **NACA 4, 5, 6 Series** (with Auto-Web-Fetch) and custom files.
@@ -43,9 +43,9 @@ with col_header_right:
         pass 
 
 # Sidebar: Controls
-st.sidebar.header("🧪 Configuration")
+st.sidebar.header("Configuration")
 
-enable_comparison = st.sidebar.checkbox("⚔️ Compare Two Airfoils", value=False)
+enable_comparison = st.sidebar.checkbox("Compare Two Airfoils", value=False)
 
 
 # WEB FETCH WITH NACA 6-SERIES LOGIC
@@ -112,7 +112,7 @@ def fetch_airfoil_from_web(clean_code, is_6_series=False):
         "http://airfoiltools.com/airfoil/seligdatfile?airfoil=naca{}",
     ]
     
-    st.sidebar.info(f"🔍 Trying {len(variations)} naming variations across {len(base_urls)} databases...")
+    st.sidebar.info(f"Trying {len(variations)} naming variations across {len(base_urls)} databases...")
     
     for code in variations:
         for url_template in base_urls:
@@ -212,8 +212,8 @@ def get_airfoil_input(key_prefix):
                 st.sidebar.warning(f"Requires exactly 5 digits.")
 
         elif input_type == "NACA 6-Series":
-            st.sidebar.caption("✅ Examples: 63-415, 64-212, 65-018, 66-209")
-            st.sidebar.caption("💡 Format: 6X-YZZ (X=pressure location, Y=CL×10, ZZ=thickness%)")
+            st.sidebar.caption("Examples: 63-415, 64-212, 65-018, 66-209")
+            st.sidebar.caption("Format: 6X-YZZ (X=pressure location, Y=CL×10, ZZ=thickness%)")
             
             raw_code = st.sidebar.text_input(
                 f"Code (6-Series)", 
@@ -228,26 +228,26 @@ def get_airfoil_input(key_prefix):
                 # Validate format 
                 digits_only = re.sub(r'[^0-9]', '', clean_code)
                 if not (len(digits_only) >= 4 and digits_only[0] == '6'):
-                    st.sidebar.error("❌ Invalid format. Must start with '6' (e.g., 63-415)")
+                    st.sidebar.error("Invalid format. Must start with '6' (e.g., 63-415)")
                 else:
                     name = f"NACA {clean_code.upper()}"
                     success = False
                     
                     # Strategy 1: Try Local AeroSandbox Library
-                    st.sidebar.info("🔄 Step 1/3: Checking local database...")
+                    st.sidebar.info("Step 1/3: Checking local database...")
                     for variant in [clean_code, clean_code.replace('-', ''), f"naca{clean_code}"]:
                         try:
                             af = asb.Airfoil(variant)
                             coords = af.repanel(n_points_per_side=100).coordinates
                             success = True
-                            st.sidebar.success(f"✅ Found locally as '{variant}'")
+                            st.sidebar.success(f"Found locally as '{variant}'")
                             break
                         except:
                             continue
                     
                     # Strategy 2: Web Fetch with Enhanced Logic
                     if not success:
-                        st.sidebar.info("🔄 Step 2/3: Searching online databases...")
+                        st.sidebar.info("Step 2/3: Searching online databases...")
                         with st.spinner(f"Fetching NACA {clean_code} from web..."):
                             web_coords, web_name = fetch_airfoil_from_web(clean_code, is_6_series=True)
                             
@@ -264,23 +264,23 @@ def get_airfoil_input(key_prefix):
                                     pass  # Use raw coords if repanel fails
                                 
                                 success = True
-                                st.sidebar.success(f"✅ {web_name} downloaded!")
+                                st.sidebar.success(f"{web_name} downloaded!")
                     
                     # Strategy 3: Generate Analytically 
                     if not success:
-                        st.sidebar.info("🔄 Step 3/3: Attempting analytical generation...")
+                        st.sidebar.info("Step 3/3: Attempting analytical generation...")
                         try:
                             # Try to generate using NACA 6-series math
                             # This is a simplified approximation
                             coords = generate_naca_6_series_approximation(clean_code)
                             if coords is not None:
                                 success = True
-                                st.sidebar.warning(f"⚠️ Using analytical approximation (may be less accurate)")
+                                st.sidebar.warning(f"Using analytical approximation (may be less accurate)")
                         except:
                             pass
                     
                     if not success:
-                        st.sidebar.error(f"❌ Could not find or generate NACA {clean_code}")
+                        st.sidebar.error(f"Could not find or generate NACA {clean_code}")
                         st.sidebar.markdown("""
                         **Troubleshooting:**
                         - Verify the code format (e.g., 63-415, 64-212)
@@ -398,7 +398,7 @@ if enable_comparison:
 st.sidebar.markdown("---")
 
 # 2. Flow Conditions
-st.sidebar.subheader("🌊 Flow Conditions")
+st.sidebar.subheader("Flow Conditions")
 reynolds = st.sidebar.number_input(
     "Reynolds Number (Re)", 
     1000.0, 100_000_000.0, 1_000_000.0, 
@@ -483,9 +483,9 @@ if coords_1 is not None:
         )
         st.plotly_chart(fig_geo, use_container_width=True)
 
-if st.button("🚀 Run Analysis", type="primary"):
+if st.button("Run Analysis", type="primary"):
     if coords_1 is None:
-        st.error("❌ Please select Airfoil 1 first.")
+        st.error("Please select Airfoil 1 first.")
     else:
         with st.spinner("Running simulation..."):
             try:
@@ -518,7 +518,7 @@ if st.button("🚀 Run Analysis", type="primary"):
                     cm1 = res1['CM'][0]
                     ld1 = cl1 / cd1 if cd1 > 0 else 0
 
-                    st.success(f"✅ Analysis complete for {name_1}")
+                    st.success(f"Analysis complete for {name_1}")
                     cols = st.columns(4)
                     cols[0].metric("CL (Lift)", f"{cl1:.4f}")
                     cols[1].metric("CD (Drag)", f"{cd1:.5f}")
@@ -527,12 +527,12 @@ if st.button("🚀 Run Analysis", type="primary"):
                     
                     if 'analysis_confidence' in res1:
                         conf = res1['analysis_confidence'][0]
-                        st.caption(f"🤖 AI Confidence: {conf:.1%}")
+                        st.caption(f"AI Confidence: {conf:.1%}")
                         st.progress(float(conf))
 
                     if res2:
                         st.divider()
-                        st.subheader(f"🆚 Comparison: {name_2}")
+                        st.subheader(f"Comparison: {name_2}")
                         cl2 = res2['CL'][0]
                         cd2 = res2['CD'][0]
                         cm2 = res2['CM'][0]
@@ -615,3 +615,4 @@ if st.button("🚀 Run Analysis", type="primary"):
                 st.error(f"❌ Simulation failed: {e}")
                 st.exception(e)
                 
+
