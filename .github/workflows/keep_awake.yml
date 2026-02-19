@@ -1,4 +1,5 @@
 name: Keep Streamlit App Awake
+
 on:
   schedule:
     - cron: '*/15 * * * *'
@@ -10,5 +11,5 @@ jobs:
     steps:
       - name: Ping Streamlit App
         run: |
-          curl -sL "https://digitalwindtunnel-ksezhcqyb8xukhopjugclm.streamlit.app/" > /dev/null
+          curl -sL "https://digitalwindtunnel-ksezhcqyb8xukhopjugclm.streamlit.app/" > /dev/null || true
           echo "App pinged successfully!"
