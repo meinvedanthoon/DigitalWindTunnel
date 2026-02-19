@@ -1,4 +1,4 @@
-# 💨 Digital Wind Tunnel Pro
+# Digital Wind Tunnel Pro
 
 **Digital Wind Tunnel Pro** is a web-based aerodynamic analysis tool built with Python and Streamlit. It allows students, engineers, and hobbyists to simulate, analyze, and compare the performance of different airfoils in a virtual environment.
 
