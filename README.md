@@ -4,7 +4,7 @@
 
 Powered by [NeuralFoil](https://github.com/peterdsharpe/NeuralFoil) and [AeroSandbox](https://github.com/peterdsharpe/AeroSandbox), this tool provides rapid aerodynamic predictions without the need for computationally expensive CFD software.
 
-## 🚀 Features
+## Features
 
 * **Airfoil Generation & Import**:
     * **NACA 4-Digit Series**: Generate standard airfoils (e.g., 2412, 0012).
@@ -21,7 +21,7 @@ Powered by [NeuralFoil](https://github.com/peterdsharpe/NeuralFoil) and [AeroSan
     * Interactive charts for $C_L$ vs $\alpha$, $C_L$ vs $C_D$, and Efficiency ($L/D$).
 * **Data Export**: Download your simulation results as a CSV file for further analysis in Excel or MATLAB.
 
-## 🛠️ Installation
+## Installation
 
 1.  **Clone the repository:**
     ```bash
@@ -43,7 +43,7 @@ Powered by [NeuralFoil](https://github.com/peterdsharpe/NeuralFoil) and [AeroSan
     pip install -r requirements.txt
     ```
 
-## 💻 Usage
+## Usage
 
 Run the Streamlit application:
 
