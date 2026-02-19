@@ -1,10 +1,8 @@
 name: Keep Streamlit App Awake
-
 on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
-
 jobs:
   ping-app:
     runs-on: ubuntu-latest
